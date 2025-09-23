@@ -12,10 +12,7 @@ def main():
     parser.add_argument("base", type=Path)
     parser.add_argument("branch", type=Path)
     parser.add_argument("--mode", choices=["compile", "lock", "pyproject-toml"])
-    parser.add_argument(
-        "--markdown",
-        action="store_true",
-    )
+    parser.add_argument("--markdown", action="store_true")
     args = parser.parse_args()
     create_report(args.base, args.branch, args.mode, args.markdown)
 

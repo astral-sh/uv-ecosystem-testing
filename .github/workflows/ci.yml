@@ -23,3 +23,6 @@ jobs:
 
       - name: Run ruff
         run: uv run ruff check
+
+      - name: Check prettier formatting
+        run: npx prettier --prose-wrap always --check "**/*.{md,yml}"

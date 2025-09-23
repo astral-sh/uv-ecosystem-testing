@@ -19,3 +19,6 @@ build-backend = "uv_build"
 dev = [
     "ruff>=0.13.1,<0.14.0",
 ]
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true

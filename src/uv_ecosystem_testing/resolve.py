@@ -16,7 +16,7 @@ from threading import Thread
 import tomli_w
 from tqdm.auto import tqdm
 
-from uv_ecosystem_testing import data_dir, cache_dir
+from uv_ecosystem_testing import cache_dir, top_15k_pypi, top_15k_pypi_latest_version
 
 
 @dataclass
@@ -36,6 +36,7 @@ def run_uv(
     cache: Path,
     offline: bool,
     output: Path,
+    i_am_in_docker: bool = False,
 ) -> Summary:
     """Resolve in a uv subprocess.
 
@@ -45,13 +46,7 @@ def run_uv(
     package_dir = output.joinpath(package)
     package_dir.mkdir()
     command = prepare_uv_command(
-        specification,
-        uv,
-        mode,
-        cache,
-        offline,
-        package_dir,
-        python,
+        specification, uv, mode, cache, offline, package_dir, python, i_am_in_docker
     )
 
     start = time.time()
@@ -96,14 +91,11 @@ def prepare_uv_command(
     offline: bool,
     package_dir: Path,
     python: str,
+    i_am_in_docker: bool = False,
 ) -> list[Path | str]:
-    shared_args = [
-        "--no-build",
-        "--cache-dir",
-        cache,
-        "--color",
-        "never",
-    ]
+    shared_args = ["--cache-dir", cache, "--color", "never", "--no-python-downloads"]
+    if not i_am_in_docker:
+        shared_args.append("--no-build")
     if offline:
         shared_args.append("--offline")
     if mode == "pyproject-toml":
@@ -145,9 +137,13 @@ def communicate(process: subprocess.Popen, stdin: str | None) -> tuple[str, str]
     Start threads to drain the pipes to avoid blocking on full pipes, but don't use
     libc's `wait` so we can use `os.wait4` later.
     """
-    if stdin:
-        process.stdin.write(stdin)
-    process.stdin.close()
+    # If the process already exited, we get a `BrokenPipeError`.
+    try:
+        if stdin:
+            process.stdin.write(stdin)
+        process.stdin.close()
+    except BrokenPipeError:
+        pass
 
     # Mutable objects to communicate across threads
     stdout = []
@@ -168,14 +164,12 @@ def communicate(process: subprocess.Popen, stdin: str | None) -> tuple[str, str]
     stdout_thread.join()
     stderr_thread.join()
 
-    return stdout[0], stderr[0]
+    return next(iter(stdout), ""), next(iter(stderr), "")
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--input", type=Path, default=data_dir.joinpath("top-15k-pypi.csv")
-    )
+    parser.add_argument("--input", type=Path, default=top_15k_pypi)
     parser.add_argument(
         "--mode",
         choices=["compile", "lock", "pyproject-toml"],
@@ -192,6 +186,11 @@ def main():
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--latest", action="store_true")
     parser.add_argument("--stats", action="store_true")
+    parser.add_argument(
+        "--i-am-in-docker",
+        action="store_true",
+        help="Execute arbitrary code while resolving. Use only in isolated environments such as docker.",
+    )
     args = parser.parse_args()
 
     resolve_all(
@@ -205,6 +204,7 @@ def main():
         args.latest,
         args.limit,
         args.stats,
+        args.i_am_in_docker,
     )
 
 
@@ -219,6 +219,7 @@ def resolve_all(
     latest: bool = False,
     limit: int | None = None,
     stats: bool = False,
+    i_am_in_docker: bool = False,
 ) -> None:
     if mode == "pyproject-toml":
         project_tomls = sorted((file.stem, file) for file in input.iterdir())
@@ -258,7 +259,7 @@ def resolve_all(
             project_names = sorted(row["project"] for row in csv.DictReader(f))
 
         if latest:
-            with data_dir.joinpath("package_versions.csv").open() as f:
+            with top_15k_pypi_latest_version.open() as f:
                 latest_versions = {
                     row["package_name"]: row["latest_version"]
                     for row in csv.DictReader(f)
@@ -297,11 +298,7 @@ def resolve_all(
         shutil.rmtree(output)
     output.mkdir(parents=True)
     output.joinpath(".gitignore").write_text("*\n")
-    parameters = {
-        "mode": mode,
-        "python": python,
-        "latest": latest,
-    }
+    parameters = {"mode": mode, "python": python, "latest": latest}
     output.joinpath("parameters.json").write_text(json.dumps(parameters))
 
     success = 0
@@ -325,6 +322,7 @@ def resolve_all(
                     cache_dir,
                     offline,
                     output,
+                    i_am_in_docker=i_am_in_docker,
                 )
             )
         total = len(packages_pending)

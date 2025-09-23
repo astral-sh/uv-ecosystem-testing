@@ -9,7 +9,7 @@ import httpx
 from httpx import AsyncClient
 from tqdm.auto import tqdm
 
-from uv_ecosystem_testing import data_dir
+from uv_ecosystem_testing import top5k_pyproject_toml_2025_gh_stars, pyproject_tomls_dir
 
 
 @dataclass
@@ -22,13 +22,9 @@ class Repository:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input",
-        type=Path,
-        default=data_dir.joinpath("top5k_pyproject_toml_2025_gh_stars.csv"),
+        "--input", type=Path, default=top5k_pyproject_toml_2025_gh_stars
     )
-    parser.add_argument(
-        "--output", type=Path, default=data_dir.joinpath("pyproject_toml")
-    )
+    parser.add_argument("--output", type=Path, default=pyproject_tomls_dir)
     args = parser.parse_args()
 
     asyncio.run(fetch_all_pyproject_toml(args.input, args.output))

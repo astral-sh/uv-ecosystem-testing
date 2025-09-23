@@ -11,7 +11,7 @@ import orjson
 from httpx import AsyncClient, HTTPError
 from tqdm.asyncio import tqdm
 
-from uv_ecosystem_testing import data_dir
+from uv_ecosystem_testing import top_15k_pypi, top_15k_pypi_latest_version
 
 
 async def get_latest_version(
@@ -59,16 +59,8 @@ async def get_latest_versions(input_file: Path, output_file: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--input-file",
-        type=Path,
-        default=data_dir.joinpath("top-15k-pypi.csv"),
-    )
-    parser.add_argument(
-        "--output-file",
-        type=Path,
-        default=data_dir.joinpath("top-15k-pypi-latest-version.csv"),
-    )
+    parser.add_argument("--input-file", type=Path, default=top_15k_pypi)
+    parser.add_argument("--output-file", type=Path, default=top_15k_pypi_latest_version)
     args = parser.parse_args()
     asyncio.run(get_latest_versions(args.input_file, args.output_file))
 

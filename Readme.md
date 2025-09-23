@@ -42,13 +42,19 @@ https://hugovk.github.io/top-pypi-packages/, with one capturing the
 
 For pyproject-toml, `pyproject.toml` files from popular GitHub projects are
 used. Data from the [GH Archive](https://www.gharchive.org/) was queried with
-[`top5k_pyproject_toml_2025_gh_stars.sql`](data/top5k_pyproject_toml_2025_gh_stars.sql).
+[`top5k-pyproject-toml-2025-gh-stars.sql`](data/top5k-pyproject-toml-2025-gh-stars.sql).
 This dataset captures more uv and resolver functionality, but is also much
 smaller. The corresponding `pyproject.toml` files can be downloaded with:
 
 ```shell
 uv run python -m uv_ecosystem_testing.fetch_pyproject_toml
 ```
+
+While it's possible to download and generate all data files on demand, it
+generates a lot of API requests each time and adds more changes between runs. On
+the other hands, the `pyproject.toml` files are too many to include in Git. As a
+compromise, the top 15k PyPI packages and latest version list are included in
+the repository, while the `pyproject.toml` files are cache locally.
 
 All operations run with `--no-build` to allow resolving arbitrary requirements
 without further isolation.
