@@ -43,7 +43,7 @@ https://hugovk.github.io/top-pypi-packages/, with one capturing the
 For pyproject-toml, `pyproject.toml` files from popular GitHub projects are
 used. Data from the [GH Archive](https://www.gharchive.org/) was queried with
 [`top5k-pyproject-toml-2025-gh-stars.sql`](data/top5k-pyproject-toml-2025-gh-stars.sql).
-This dataset captures more uv and resolver functionality, but is also much
+This dataset captures more uv and resolver functionality but is also much
 smaller. The corresponding `pyproject.toml` files can be downloaded with:
 
 ```shell
@@ -56,5 +56,15 @@ the other hands, the `pyproject.toml` files are too many to include in Git. As a
 compromise, the top 15k PyPI packages and latest version list are included in
 the repository, while the `pyproject.toml` files are cache locally.
 
+## Safety and docker
+
 All operations run with `--no-build` to allow resolving arbitrary requirements
 without further isolation.
+
+It's possible to run the resolution in a docker container and allow building
+source distributions during resolution.
+
+```
+docker build . -t uv-ecosystem-testing
+docker run -it --rm -v .:/io:ro -v ./docker:/work -e UV_ECOSYSTEM_TESTING_ROOT=/io uv-ecosystem-testing --base /work/base --branch /work/branch --report /work/Report.md --cache /work/cache --i-am-in-docker /io/uv-main /io/uv-prio-changes
+```
