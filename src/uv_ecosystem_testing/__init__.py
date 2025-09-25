@@ -1,4 +1,7 @@
+import json
 import os
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 # TODO(konsti): Provider a way to set the root in the CLI and derive all paths from that.
@@ -17,3 +20,31 @@ top_15k_pypi_latest_version = data_dir.joinpath("top-15k-pypi-latest-version.csv
 pyproject_tomls_dir = root_dir.joinpath("pyproject_tomls")
 
 cache_dir = root_dir.joinpath("cache")
+
+
+class Mode(Enum):
+    COMPILE = "compile"
+    LOCK = "lock"
+    PYPROJECT_TOML = "pyproject-toml"
+
+
+@dataclass
+class RunConfig:
+    """The parameters of a run, stored in a JSON file in the output directory."""
+
+    mode: Mode
+    python: str
+    latest: bool
+    i_am_in_docker: bool
+
+    def write(self, output_dir: Path):
+        data = self.__dict__.copy()
+        data["mode"] = self.mode.value if isinstance(self.mode, Mode) else self.mode
+        output_dir.joinpath("parameters.json").write_text(json.dumps(data))
+
+    @staticmethod
+    def read(output_dir: Path) -> "RunConfig":
+        parameters = json.loads(output_dir.joinpath("parameters.json").read_text())
+        if isinstance(parameters["mode"], str):
+            parameters["mode"] = Mode(parameters["mode"])
+        return RunConfig(**parameters)
