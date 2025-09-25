@@ -16,8 +16,13 @@ from threading import Thread
 import tomli_w
 from tqdm.auto import tqdm
 
-from uv_ecosystem_testing import cache_dir, top_15k_pypi, top_15k_pypi_latest_version
-from uv_ecosystem_testing.run_config import RunConfig
+from uv_ecosystem_testing import (
+    cache_dir,
+    top_15k_pypi,
+    top_15k_pypi_latest_version,
+    Mode,
+    RunConfig,
+)
 
 
 @dataclass
@@ -32,7 +37,7 @@ def run_uv(
     package: str,
     specification: str,
     uv: Path,
-    mode: str,
+    mode: Mode,
     python: str,
     cache: Path,
     offline: bool,
@@ -61,7 +66,9 @@ def run_uv(
         text=True,
     )
 
-    stdout, stderr = communicate(process, specification if mode == "compile" else None)
+    stdout, stderr = communicate(
+        process, specification if mode == Mode.COMPILE else None
+    )
 
     # At this point, the process is a zombie, so has called `exit()`, but we haven't reaped it with `wait4` yet.
 
@@ -87,7 +94,7 @@ def run_uv(
 def prepare_uv_command(
     specification: str,
     uv: Path,
-    mode: str,
+    mode: Mode,
     cache: Path,
     offline: bool,
     package_dir: Path,
@@ -99,10 +106,10 @@ def prepare_uv_command(
         shared_args.append("--no-build")
     if offline:
         shared_args.append("--offline")
-    if mode == "pyproject-toml":
+    if mode == Mode.PYPROJECT_TOML:
         package_dir.joinpath("pyproject.toml").write_text(specification)
         command = [uv, "lock", *shared_args]
-    elif mode == "lock":
+    elif mode == Mode.LOCK:
         package_dir.joinpath("pyproject.toml").write_text(
             f"""
             [project]
@@ -113,7 +120,7 @@ def prepare_uv_command(
             """
         )
         command = [uv, "lock", *shared_args]
-    elif mode == "compile":
+    elif mode == Mode.COMPILE:
         command = [
             uv,
             "pip",
@@ -173,8 +180,8 @@ def main():
     parser.add_argument("--input", type=Path, default=top_15k_pypi)
     parser.add_argument(
         "--mode",
-        choices=["compile", "lock", "pyproject-toml"],
-        default="compile",
+        choices=[mode.value for mode in Mode],
+        default=Mode.COMPILE.value,
         help="`compile`: `uv pip compile`, "
         "`lock`: `uv lock` from a single requirement"
         "`pyproject-toml`: `uv lock` from a directory of `pyproject.toml` files",
@@ -197,7 +204,7 @@ def main():
     resolve_all(
         args.input,
         args.output,
-        args.mode,
+        Mode(args.mode),
         args.uv,
         args.cache,
         args.python,
@@ -212,7 +219,7 @@ def main():
 def resolve_all(
     input: Path,
     output: Path,
-    mode: str,
+    mode: Mode,
     uv: Path,
     cache_dir: Path = cache_dir,
     python: str = "3.13",
@@ -222,7 +229,7 @@ def resolve_all(
     stats: bool = False,
     i_am_in_docker: bool = False,
 ) -> None:
-    if mode == "pyproject-toml":
+    if mode == Mode.PYPROJECT_TOML:
         project_tomls = sorted((file.stem, file) for file in input.iterdir())
         jobs = {}
         no_project = 0

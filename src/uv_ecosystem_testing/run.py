@@ -9,6 +9,7 @@ from uv_ecosystem_testing import (
     pyproject_tomls_dir,
     top5k_pyproject_toml_2025_gh_stars,
     mypy_primer,
+    Mode,
 )
 from uv_ecosystem_testing.report import create_report
 from uv_ecosystem_testing.fetch_pyproject_toml import fetch_all_pyproject_toml
@@ -81,7 +82,7 @@ async def run(
         resolve_all(
             top_15k_pypi,
             base.joinpath("compile"),
-            "compile",
+            Mode.COMPILE,
             uv_base,
             cache_dir=cache,
             limit=limit,
@@ -93,7 +94,7 @@ async def run(
         resolve_all(
             top_15k_pypi,
             branch.joinpath("compile"),
-            "compile",
+            Mode.COMPILE,
             uv_branch,
             cache_dir=cache,
             limit=limit,
@@ -105,7 +106,7 @@ async def run(
         resolve_all(
             top_15k_pypi,
             base.joinpath("lock"),
-            "lock",
+            Mode.LOCK,
             uv_base,
             cache_dir=cache,
             limit=limit,
@@ -117,7 +118,7 @@ async def run(
         resolve_all(
             top_15k_pypi,
             branch.joinpath("lock"),
-            "lock",
+            Mode.LOCK,
             uv_branch,
             cache_dir=cache,
             limit=limit,
@@ -129,7 +130,7 @@ async def run(
         resolve_all(
             pyproject_tomls_dir,
             base.joinpath("pyproject-toml"),
-            "pyproject-toml",
+            Mode.PYPROJECT_TOML,
             uv_base,
             cache_dir=cache,
             limit=limit,
@@ -141,7 +142,7 @@ async def run(
         resolve_all(
             pyproject_tomls_dir,
             branch.joinpath("pyproject-toml"),
-            "pyproject-toml",
+            Mode.PYPROJECT_TOML,
             uv_branch,
             cache_dir=cache,
             limit=limit,
