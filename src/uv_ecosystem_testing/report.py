@@ -6,28 +6,30 @@ import sys
 from pathlib import Path
 from typing import TextIO
 
+from uv_ecosystem_testing.run_config import RunConfig
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("base", type=Path)
     parser.add_argument("branch", type=Path)
-    parser.add_argument("--mode", choices=["compile", "lock", "pyproject-toml"])
     parser.add_argument("--markdown", action="store_true")
     args = parser.parse_args()
-    create_report(args.base, args.branch, args.mode, args.markdown)
+    create_report(args.base, args.branch, args.markdown)
 
 
 def create_report(
-    base: Path,
-    branch: Path,
-    mode: str,
-    markdown: bool = False,
-    writer: TextIO = sys.stdout,
+    base: Path, branch: Path, markdown: bool = False, writer: TextIO = sys.stdout
 ) -> None:
     # Supress noise from fluctuations in execution time
     redact_time = re.compile(r"(0\.)?(\d+)ms|(\d+).(\d+)s")
 
-    parameters = json.loads(base.joinpath("parameters.json").read_text())
+    parameters = RunConfig.read(base)
+    parameters_branch = RunConfig.read(branch)
+    if parameters != parameters_branch:
+        raise RuntimeError(
+            f"Parameters differ between runs:\n   base: {parameters}\n   branch: {parameters_branch}"
+        )
 
     total = 0
     successful = 0
@@ -54,7 +56,7 @@ def create_report(
             # also `uv.lock` doesn't exist for failed resolutions
             continue
 
-        if mode == "compile":
+        if parameters.mode == "compile":
             resolution = package_base.joinpath("stdout.txt").read_text()
         else:
             resolution = package_base.joinpath("uv.lock").read_text()
@@ -63,7 +65,7 @@ def create_report(
         stderr = package_base.joinpath("stderr.txt").read_text()
         stderr = redact_time.sub(r"[TIME]", stderr)
 
-        if mode == "compile":
+        if parameters.mode == "compile":
             resolution_branch = package_branch.joinpath("stdout.txt").read_text()
         else:
             resolution_branch = package_branch.joinpath("uv.lock").read_text()
@@ -78,8 +80,10 @@ def create_report(
             )
 
     if markdown:
-        writer.write(f"**{mode.replace('pyproject-toml', 'pyproject.toml')}**\n")
-        if mode == "pyproject-toml":
+        writer.write(
+            f"**{parameters.mode.replace('pyproject-toml', 'pyproject.toml')}**\n"
+        )
+        if parameters.mode == "pyproject-toml":
             writer.write(
                 " * Dataset: A set of top level `pyproject.toml` from GitHub projects popular in 2025. "
                 + "Only `pyproject.toml` files with a `[project]` section and static dependencies are included.\n"
@@ -90,9 +94,14 @@ def create_report(
             )
         writer.write(
             " * Command: "
-            + f"`{'uv pip compile' if mode == 'compile' else 'uv lock'}` with `--no-build` "
-            + f"on Python {parameters['python']} "
-            + ("pinned to the latest package version." if parameters["latest"] else ".")
+            + f"`{'uv pip compile' if parameters.mode == 'compile' else 'uv lock'}` "
+            + ("with `--no-build` " if not parameters.i_am_in_docker else "")
+            + (
+                "with packages pinned to the latest version"
+                if parameters.latest
+                else ""
+            )
+            + f"on Python {parameters.python}."
             + "\n"
         )
         writer.write(
@@ -118,10 +127,6 @@ def create_report(
             stderr,
             stderr_branch,
         ) in differences:
-            if mode == "compile":
-                context_window = 999999
-            else:
-                context_window = 3
             writer.write(f"\n<details>\n<summary>{package}</summary>\n\n")
             if resolution != resolution_branch:
                 writer.write("```diff\n")
@@ -131,8 +136,7 @@ def create_report(
                         resolution_branch.splitlines(keepends=True),
                         fromfile="base",
                         tofile="branch",
-                        # Show the dependencies in full
-                        n=context_window,
+                        n=0,
                     )
                 )
                 writer.write("\n```\n")
@@ -144,8 +148,7 @@ def create_report(
                         stderr_branch.splitlines(keepends=True),
                         fromfile="base",
                         tofile="branch",
-                        # Show the log in full
-                        n=context_window,
+                        n=0,
                     )
                 )
                 writer.write("```\n")

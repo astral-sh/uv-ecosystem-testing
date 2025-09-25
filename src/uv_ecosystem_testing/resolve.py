@@ -17,6 +17,7 @@ import tomli_w
 from tqdm.auto import tqdm
 
 from uv_ecosystem_testing import cache_dir, top_15k_pypi, top_15k_pypi_latest_version
+from uv_ecosystem_testing.run_config import RunConfig
 
 
 @dataclass
@@ -238,7 +239,7 @@ def resolve_all(
                 no_project += 1
                 continue
             if dynamic := project.get("dynamic"):
-                if "dependencies" in dynamic:
+                if "dependencies" in dynamic and not i_am_in_docker:
                     dynamic_dependencies += 1
                     continue
                 if "version" in dynamic:
@@ -249,9 +250,10 @@ def resolve_all(
             jobs[package] = tomli_w.dumps(data)
 
         print(f"`pyproject.toml`s without `[project]`: {no_project}")
-        print(
-            f"`pyproject.toml`s with `dynamic = ['dependencies']`: {dynamic_dependencies}"
-        )
+        if not i_am_in_docker:
+            print(
+                f"`pyproject.toml`s with `dynamic = ['dependencies']`: {dynamic_dependencies}"
+            )
         if latest:
             raise ValueError("Latest versions are not supported in pyproject-toml mode")
     else:
@@ -298,8 +300,9 @@ def resolve_all(
         shutil.rmtree(output)
     output.mkdir(parents=True)
     output.joinpath(".gitignore").write_text("*\n")
-    parameters = {"mode": mode, "python": python, "latest": latest}
-    output.joinpath("parameters.json").write_text(json.dumps(parameters))
+    RunConfig(
+        mode=mode, python=python, latest=latest, i_am_in_docker=i_am_in_docker
+    ).write(output)
 
     success = 0
     all_results = []  # Track all results for analysis

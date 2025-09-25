@@ -8,6 +8,7 @@ from uv_ecosystem_testing import (
     top_15k_pypi,
     pyproject_tomls_dir,
     top5k_pyproject_toml_2025_gh_stars,
+    mypy_primer,
 )
 from uv_ecosystem_testing.report import create_report
 from uv_ecosystem_testing.fetch_pyproject_toml import fetch_all_pyproject_toml
@@ -25,6 +26,7 @@ def main():
     parser.add_argument("--report", type=Path, default=None)
     parser.add_argument("--latest", action="store_true")
     parser.add_argument("--only-report", action="store_true")
+    parser.add_argument("--offline", action="store_true")
     parser.add_argument("--python", type=str, default="3.13")
     parser.add_argument(
         "--i-am-in-docker",
@@ -45,6 +47,7 @@ def main():
             latest=args.latest,
             python=args.python,
             only_report=args.only_report,
+            offline=args.offline,
             i_am_in_docker=args.i_am_in_docker,
         )
     )
@@ -61,14 +64,17 @@ async def run(
     latest: bool = False,
     python: str = "3.13",
     only_report: bool = False,
+    offline: bool = False,
     i_am_in_docker: bool = False,
 ):
     base.mkdir(exist_ok=True, parents=True)
+    base.joinpath(".gitignore").write_text("*\n")
     branch.mkdir(exist_ok=True, parents=True)
+    branch.joinpath(".gitignore").write_text("*\n")
 
     if not pyproject_tomls_dir.is_dir():
         await fetch_all_pyproject_toml(
-            top5k_pyproject_toml_2025_gh_stars, pyproject_tomls_dir
+            [top5k_pyproject_toml_2025_gh_stars, mypy_primer], pyproject_tomls_dir
         )
 
     if not only_report:
@@ -81,6 +87,7 @@ async def run(
             limit=limit,
             latest=latest,
             python=python,
+            offline=offline,
             i_am_in_docker=i_am_in_docker,
         )
         resolve_all(
@@ -92,6 +99,7 @@ async def run(
             limit=limit,
             latest=latest,
             python=python,
+            offline=offline,
             i_am_in_docker=i_am_in_docker,
         )
         resolve_all(
@@ -103,6 +111,7 @@ async def run(
             limit=limit,
             latest=latest,
             python=python,
+            offline=offline,
             i_am_in_docker=i_am_in_docker,
         )
         resolve_all(
@@ -114,6 +123,7 @@ async def run(
             limit=limit,
             latest=latest,
             python=python,
+            offline=offline,
             i_am_in_docker=i_am_in_docker,
         )
         resolve_all(
@@ -125,6 +135,7 @@ async def run(
             limit=limit,
             latest=latest,
             python=python,
+            offline=offline,
             i_am_in_docker=i_am_in_docker,
         )
         resolve_all(
@@ -136,37 +147,26 @@ async def run(
             limit=limit,
             latest=latest,
             python=python,
+            offline=offline,
             i_am_in_docker=i_am_in_docker,
         )
 
+    create_report(base.joinpath("compile"), branch.joinpath("compile"), False)
+    create_report(base.joinpath("lock"), branch.joinpath("lock"), False)
     create_report(
-        base.joinpath("compile"), branch.joinpath("compile"), "compile", False
-    )
-    create_report(base.joinpath("lock"), branch.joinpath("lock"), "lock", False)
-    create_report(
-        base.joinpath("pyproject-toml"),
-        branch.joinpath("pyproject-toml"),
-        "pyproject-toml",
-        False,
+        base.joinpath("pyproject-toml"), branch.joinpath("pyproject-toml"), False
     )
 
     if report:
         with report.open("w") as writer:
             writer.write("## Ecosystem testing report\n")
             create_report(
-                base.joinpath("compile"),
-                branch.joinpath("compile"),
-                "compile",
-                True,
-                writer,
+                base.joinpath("compile"), branch.joinpath("compile"), True, writer
             )
-            create_report(
-                base.joinpath("lock"), branch.joinpath("lock"), "lock", True, writer
-            )
+            create_report(base.joinpath("lock"), branch.joinpath("lock"), True, writer)
             create_report(
                 base.joinpath("pyproject-toml"),
                 branch.joinpath("pyproject-toml"),
-                "pyproject-toml",
                 True,
                 writer,
             )

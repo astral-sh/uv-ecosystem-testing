@@ -10,6 +10,7 @@ data_dir = root_dir.joinpath("data")
 top5k_pyproject_toml_2025_gh_stars = data_dir.joinpath(
     "top5k-pyproject-toml-2025-gh-stars.csv"
 )
+mypy_primer = data_dir.joinpath("mypy-primer.csv")
 top_15k_pypi = data_dir.joinpath("top-15k-pypi.csv")
 top_15k_pypi_latest_version = data_dir.joinpath("top-15k-pypi-latest-version.csv")
 

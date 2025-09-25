@@ -9,7 +9,7 @@ import httpx
 from httpx import AsyncClient
 from tqdm.auto import tqdm
 
-from uv_ecosystem_testing import top5k_pyproject_toml_2025_gh_stars, pyproject_tomls_dir
+from uv_ecosystem_testing import pyproject_tomls_dir
 
 
 @dataclass
@@ -22,32 +22,40 @@ class Repository:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input", type=Path, default=top5k_pyproject_toml_2025_gh_stars
+        "--input",
+        action="append",
+        type=Path,
+        help="csv file(s) with a `repo_name` culumn and optionally a `ref` column",
     )
     parser.add_argument("--output", type=Path, default=pyproject_tomls_dir)
+    parser.add_argument("--keep", action="store_true")
     args = parser.parse_args()
 
-    asyncio.run(fetch_all_pyproject_toml(args.input, args.output))
+    asyncio.run(fetch_all_pyproject_toml(args.input, args.output, args.keep))
 
 
-async def fetch_all_pyproject_toml(repositories: Path, output: Path):
-    with repositories.open() as f:
-        repositories = []
-        # Avoid duplicates
-        seen = set()
-        for row in csv.DictReader(f):
-            if row["repo_name"] in seen:
-                continue
-            seen.add(row["repo_name"])
-            repositories.append(
-                Repository(
-                    org=row["repo_name"].split("/")[0],
-                    repo=row["repo_name"].split("/")[1],
-                    ref=row["ref"],
+async def fetch_all_pyproject_toml(
+    repositories_files: list[Path], output: Path, keep: bool = False
+):
+    repositories = []
+    seen = set()
+    for repositories_file in repositories_files:
+        with repositories_file.open() as f:
+            # Avoid duplicates
+            for row in csv.DictReader(f):
+                if row["repo_name"] in seen:
+                    continue
+                seen.add(row["repo_name"])
+                repositories.append(
+                    Repository(
+                        org=row["repo_name"].split("/")[0],
+                        repo=row["repo_name"].split("/")[1],
+                        # Use master so we try to master and main
+                        ref=row.get("ref", "refs/heads/master"),
+                    )
                 )
-            )
 
-    if output.exists():
+    if not keep and output.exists():
         shutil.rmtree(output)
     output.mkdir(parents=True)
     output.joinpath(".gitignore").write_text("*\n")
