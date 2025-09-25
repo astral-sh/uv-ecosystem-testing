@@ -127,6 +127,10 @@ def create_report(
             stderr,
             stderr_branch,
         ) in differences:
+            if parameters.mode == "compile":
+                n = 9999
+            else:
+                n = 3
             writer.write(f"\n<details>\n<summary>{package}</summary>\n\n")
             if resolution != resolution_branch:
                 writer.write("```diff\n")
@@ -136,7 +140,7 @@ def create_report(
                         resolution_branch.splitlines(keepends=True),
                         fromfile="base",
                         tofile="branch",
-                        n=0,
+                        n=n,
                     )
                 )
                 writer.write("\n```\n")
@@ -148,7 +152,7 @@ def create_report(
                         stderr_branch.splitlines(keepends=True),
                         fromfile="base",
                         tofile="branch",
-                        n=0,
+                        n=n,
                     )
                 )
                 writer.write("```\n")
