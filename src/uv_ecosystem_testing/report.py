@@ -83,7 +83,7 @@ def create_report(
         writer.write(
             f"**{parameters.mode.value.replace('pyproject-toml', 'pyproject.toml')}**\n"
         )
-        if parameters.mode == Mode.PYPROJECT_TOML:
+        if parameters.mode in [Mode.PYPROJECT_TOML, Mode.SYNC]:
             writer.write(
                 " * Dataset: A set of top level `pyproject.toml` from GitHub projects popular in 2025. "
                 + "Only `pyproject.toml` files with a `[project]` section and static dependencies are included.\n"

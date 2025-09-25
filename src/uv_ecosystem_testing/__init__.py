@@ -26,6 +26,7 @@ class Mode(Enum):
     COMPILE = "compile"
     LOCK = "lock"
     PYPROJECT_TOML = "pyproject-toml"
+    SYNC = "sync"
 
 
 @dataclass

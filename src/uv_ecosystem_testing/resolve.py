@@ -22,6 +22,7 @@ from uv_ecosystem_testing import (
     top_15k_pypi_latest_version,
     Mode,
     RunConfig,
+    pyproject_tomls_dir,
 )
 
 
@@ -57,9 +58,14 @@ def run_uv(
 
     start = time.time()
 
+    env = os.environ.copy()
+    if "VIRTUAL_ENV" in env:
+        del env["VIRTUAL_ENV"]
+
     process = subprocess.Popen(
         command,
         cwd=package_dir,
+        env=env,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -70,15 +76,21 @@ def run_uv(
         process, specification if mode == Mode.COMPILE else None
     )
 
-    # At this point, the process is a zombie, so has called `exit()`, but we haven't reaped it with `wait4` yet.
+    # At this point the process should be finished, stdout and stderr being closed usually means that.
+    # The process is a zombie, so has called `exit()`, but we haven't reaped it with `wait`/`wait4` yet.
 
     # rusage is only available on unix
     if os.name == "posix":
-        # Wait for process and get resource usage
+        # Reap the process to get resource usage information.
         _pid, exit_code, rusage = os.wait4(process.pid, 0)
     else:
         exit_code = process.wait()
         rusage = None
+
+    if mode == Mode.SYNC:
+        venv = package_dir.joinpath(".venv")
+        if venv.exists():
+            shutil.rmtree(venv)
 
     max_rss = rusage.ru_maxrss if rusage else 0
 
@@ -109,6 +121,11 @@ def prepare_uv_command(
     if mode == Mode.PYPROJECT_TOML:
         package_dir.joinpath("pyproject.toml").write_text(specification)
         command = [uv, "lock", *shared_args]
+    elif mode == Mode.SYNC:
+        package_dir.joinpath("pyproject.toml").write_text(specification)
+        command = [uv, "sync", *shared_args, "--preview"]
+        if not i_am_in_docker:
+            command.append("--no-install-project")
     elif mode == Mode.LOCK:
         package_dir.joinpath("pyproject.toml").write_text(
             f"""
@@ -175,47 +192,6 @@ def communicate(process: subprocess.Popen, stdin: str | None) -> tuple[str, str]
     return next(iter(stdout), ""), next(iter(stderr), "")
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=Path, default=top_15k_pypi)
-    parser.add_argument(
-        "--mode",
-        choices=[mode.value for mode in Mode],
-        default=Mode.COMPILE.value,
-        help="`compile`: `uv pip compile`, "
-        "`lock`: `uv lock` from a single requirement"
-        "`pyproject-toml`: `uv lock` from a directory of `pyproject.toml` files",
-    )
-    parser.add_argument("--python", "-p", type=str, default="3.13")
-    parser.add_argument("--output", type=Path, default="output")
-    parser.add_argument("--uv", type=Path, default=Path("uv"))
-    parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--cache", type=Path, default=cache_dir)
-    parser.add_argument("--offline", action="store_true")
-    parser.add_argument("--latest", action="store_true")
-    parser.add_argument("--stats", action="store_true")
-    parser.add_argument(
-        "--i-am-in-docker",
-        action="store_true",
-        help="Execute arbitrary code while resolving. Use only in isolated environments such as docker.",
-    )
-    args = parser.parse_args()
-
-    resolve_all(
-        args.input,
-        args.output,
-        Mode(args.mode),
-        args.uv,
-        args.cache,
-        args.python,
-        args.offline,
-        args.latest,
-        args.limit,
-        args.stats,
-        args.i_am_in_docker,
-    )
-
-
 def resolve_all(
     input: Path,
     output: Path,
@@ -229,7 +205,7 @@ def resolve_all(
     stats: bool = False,
     i_am_in_docker: bool = False,
 ) -> None:
-    if mode == Mode.PYPROJECT_TOML:
+    if mode in [Mode.PYPROJECT_TOML, Mode.SYNC]:
         project_tomls = sorted((file.stem, file) for file in input.iterdir())
         jobs = {}
         no_project = 0
@@ -377,6 +353,56 @@ def resolve_all(
                 print(
                     f"{summary.package}: {max_rss:.1f} MB (exit code: {summary.exit_code})"
                 )
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", type=Path, default=None)
+    parser.add_argument(
+        "--mode",
+        choices=[mode.value for mode in Mode],
+        default=Mode.COMPILE.value,
+        help="`compile`: `uv pip compile`\n"
+        + "`lock`: `uv lock` from a single requirement\n"
+        + "`pyproject-toml`: `uv lock` from a directory of `pyproject.toml` files\n"
+        + "`sync`: `uv sync` from a directory of `pyproject.toml` files",
+    )
+    parser.add_argument("--python", "-p", type=str, default="3.13")
+    parser.add_argument("--output", type=Path, default="output")
+    parser.add_argument("--uv", type=Path, default=Path("uv"))
+    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--cache", type=Path, default=cache_dir)
+    parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--latest", action="store_true")
+    parser.add_argument("--stats", action="store_true")
+    parser.add_argument(
+        "--i-am-in-docker",
+        action="store_true",
+        help="Execute arbitrary code while resolving. Use only in isolated environments such as docker.",
+    )
+    args = parser.parse_args()
+
+    if not args.input:
+        if Mode(args.mode) in [Mode.PYPROJECT_TOML, Mode.SYNC]:
+            input_path = pyproject_tomls_dir
+        else:
+            input_path = top_15k_pypi
+    else:
+        input_path = args.input
+
+    resolve_all(
+        input_path,
+        args.output,
+        Mode(args.mode),
+        args.uv,
+        args.cache,
+        args.python,
+        args.offline,
+        args.latest,
+        args.limit,
+        args.stats,
+        args.i_am_in_docker,
+    )
 
 
 if __name__ == "__main__":
