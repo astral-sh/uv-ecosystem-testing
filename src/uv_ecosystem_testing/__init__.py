@@ -45,6 +45,5 @@ class RunConfig:
     @staticmethod
     def read(output_dir: Path) -> "RunConfig":
         parameters = json.loads(output_dir.joinpath("parameters.json").read_text())
-        if isinstance(parameters["mode"], str):
-            parameters["mode"] = Mode(parameters["mode"])
+        parameters["mode"] = Mode(parameters["mode"])
         return RunConfig(**parameters)

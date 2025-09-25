@@ -88,7 +88,7 @@ async def fetch_one(client: AsyncClient, repository: Repository, output_dir: Pat
     try:
         response = await client.get(url)
         response.raise_for_status()
-    except httpx.HTTPError as e:
+    except httpx.HTTPStatusError as e:
         # The bigquery data is sometimes missing the master -> main transition
         url = f"https://raw.githubusercontent.com/{repository.org}/{repository.repo}/refs/heads/main/pyproject.toml"
         try:
@@ -96,7 +96,7 @@ async def fetch_one(client: AsyncClient, repository: Repository, output_dir: Pat
             response.raise_for_status()
         except httpx.HTTPError:
             # Ignore the error from the main fallback if it didn't work
-            if hasattr(e, "response") and e.response.status_code == 404:
+            if e.response.status_code == 404:
                 tqdm.write(
                     f"Not found: https://github.com/{repository.org}/{repository.repo}"
                 )
@@ -105,7 +105,11 @@ async def fetch_one(client: AsyncClient, repository: Repository, output_dir: Pat
                     f"Error for https://github.com/{repository.org}/{repository.repo}: {e}"
                 )
             return None
-
+    except httpx.HTTPError as e:
+        tqdm.write(
+            f"Error for https://github.com/{repository.org}/{repository.repo}: {e}"
+        )
+        return None
     output_dir.joinpath(f"{repository.repo}.toml").write_text(response.text)
     return True
 

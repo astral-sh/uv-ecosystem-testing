@@ -315,7 +315,7 @@ def resolve_all(
     all_results = []  # Track all results for analysis
     max_package_len = max(len(package) for package in jobs)
 
-    with ThreadPoolExecutor(max_workers=os.cpu_count() * 2) as executor:
+    with ThreadPoolExecutor(max_workers=(os.cpu_count() or 1) * 2) as executor:
         tasks = []
         packages_pending = []
         for package, specification in jobs.items():
