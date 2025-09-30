@@ -25,15 +25,15 @@ output:
   platform-specific and universal resolution, while `uv lock` always uses
   universal resolution.
 - The `uv pip` interface outputs the `requirements.txt` format, while `uv lock`
-  outputs `uv.lock.
+  outputs `uv.lock`.
 - A single requirement vs. a workspace with extras, groups and workspace
   members.
 
-To cover this area, there are three supported modes:
+To cover them, there are three supported modes:
 
-- compile: Run `uv pip compile` with a single package
+- compile: Run `uv pip compile` with a single package.
 - lock: Run `uv lock` on a `pyproject.toml` with a single package in
-  `project.dependencies`
+  `project.dependencies`.
 - pyproject-toml: Run `uv lock` on prepared `pyproject.toml` files.
 
 For compile and lock, the default dataset is the top 15k PyPI packages from
