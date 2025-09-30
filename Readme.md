@@ -44,9 +44,10 @@ For pyproject-toml, `pyproject.toml` files are collected from popular GitHub
 projects by querying [GH Archive](https://www.gharchive.org/) data with
 [`top5k-pyproject-toml-2025-gh-stars.sql`](data/top5k-pyproject-toml-2025-gh-stars.sql)
 and by using the
-[mypy primer project](https://github.com/hauntsaninja/mypy_primer/blob/0d20fff78b67f11f4dcbeb3d9b1c645b7198db5e/mypy_primer/projects.py).
-This dataset captures more uv and resolver functionality but is also much
-smaller. The corresponding `pyproject.toml` files can be downloaded with:
+[mypy primer project](https://github.com/hauntsaninja/mypy_primer/blob/0d20fff78b67f11f4dcbeb3d9b1c645b7198db5e/mypy_primer/projects.py),
+both published under the MIT license. This dataset captures more uv and resolver
+functionality but is also much smaller. The corresponding `pyproject.toml` files
+can be downloaded with:
 
 ```shell
 uv run -m uv_ecosystem_testing.fetch_pyproject_toml --input data/mypy-primer.csv --input data/top5k-pyproject-toml-2025-gh-stars.csv

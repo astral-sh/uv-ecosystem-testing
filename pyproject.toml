@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Testing uv on a larger number of ecosystem projects"
 readme = "Readme.md"
 requires-python = ">=3.13"
+license = "MIT OR Apache-2.0"
 dependencies = [
     "httpx>=0.28.1,<0.29.0",
     "orjson>=3.11.3,<4.0.0",
