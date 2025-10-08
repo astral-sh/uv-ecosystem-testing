@@ -15,6 +15,14 @@ uv run python -m uv_ecosystem_testing.run /path/to/uv1 /path/to/uv2 --report Rep
 
 In a hurry? Try `--limit 100` for fast results.
 
+To test in a specific mode with specific options, for example `uv sync`:
+
+```
+uv run python -m uv_ecosystem_testing.resolve --mode sync --uv ./uv-main --output base/sync
+uv run python -m uv_ecosystem_testing.resolve --mode sync --uv ./uv-branch --output branch/sync
+uv run python -m uv_ecosystem_testing.report base/sync branch/sync
+```
+
 ## Data and modes
 
 There are three factors that have a major impact on the resolution and its
@@ -50,7 +58,7 @@ functionality but is also much smaller. The corresponding `pyproject.toml` files
 can be downloaded with:
 
 ```shell
-uv run -m uv_ecosystem_testing.fetch_pyproject_toml --input data/mypy-primer.csv --input data/top5k-pyproject-toml-2025-gh-stars.csv
+uv run python -m uv_ecosystem_testing.fetch_pyproject_toml --input data/mypy-primer.csv --input data/top5k-pyproject-toml-2025-gh-stars.csv
 ```
 
 While it's possible to download and generate all data files on demand, it
@@ -66,9 +74,34 @@ requirements without
 [running arbitrary build scripts locally](https://moyix.blogspot.com/2022/09/someones-been-messing-with-my-subnormals.html).
 
 It's possible to run the resolution in a docker container and build source
-distributions during resolution. This increases the dataset coverage.
+distributions during resolution. This increases the dataset coverage. This run
+should be isolated from the host system as those builds run arbitrary code,
+which here includes mounting the project directory read-only (`.:/io:ro`).
 
 ```
 docker build . -t uv-ecosystem-testing
-docker run -it --rm -v .:/io:ro -v ./docker:/work -e UV_ECOSYSTEM_TESTING_ROOT=/io uv-ecosystem-testing --base /work/base --branch /work/branch --report /work/Report.md --cache /work/cache --i-am-in-docker /io/uv-main /io/uv-prio-changes
+docker run -it --rm -v .:/io:ro -v ./docker:/work -e UV_ECOSYSTEM_TESTING_ROOT=/io uv-ecosystem-testing -m uv_ecosystem_testing.run --base /work/base --branch /work/branch --report /work/Report.md --cache /work/cache --i-am-in-docker /io/uv-main /io/uv-prio-changes
+```
+
+Example usage with `uv sync`:
+
+```
+# Prime the build caches
+docker run -it --rm -v .:/io:ro -v ./docker:/work -e UV_ECOSYSTEM_TESTING_ROOT=/io \
+    uv-ecosystem-testing -m uv_ecosystem_testing.resolve \
+    --cache /work/cache --mode sync --uv /io/uv-main --output /work/base/sync --i-am-in-docker
+docker run -it --rm -v .:/io:ro -v ./docker:/work -e UV_ECOSYSTEM_TESTING_ROOT=/io \
+    uv-ecosystem-testing -m uv_ecosystem_testing.resolve \
+    --cache /work/cache --mode sync --uv /io/uv-branch --output /work/branch/sync --i-am-in-docker
+
+docker run -it --rm -v .:/io:ro -v ./docker:/work -e UV_ECOSYSTEM_TESTING_ROOT=/io \
+    uv-ecosystem-testing -m uv_ecosystem_testing.resolve \
+    --cache /work/cache --mode sync --uv /io/uv-main --output /work/base/sync --i-am-in-docker --offline
+docker run -it --rm -v .:/io:ro -v ./docker:/work -e UV_ECOSYSTEM_TESTING_ROOT=/io \
+    uv-ecosystem-testing -m uv_ecosystem_testing.resolve \
+    --cache /work/cache --mode sync --uv /io/uv-branch --output /work/branch/sync --i-am-in-docker --offline
+
+docker run -it --rm -v .:/io:ro -v ./docker:/work -e UV_ECOSYSTEM_TESTING_ROOT=/io \
+    uv-ecosystem-testing -m uv_ecosystem_testing.report \
+    /work/base/sync /work/branch/sync
 ```
