@@ -78,6 +78,12 @@ def create_report(
                 raise RuntimeError(f"Stdout not empty (branch): {package}")
         stderr_branch = package_branch.joinpath("stderr.txt").read_text()
         stderr_branch = redact_time.sub(r"[TIME]", stderr_branch)
+        # Redact path differences:
+        # ```diff
+        # -   Building xlsx2csv @ file:///work/base/sync/xlsx2csv
+        # +   Building xlsx2csv @ file:///work/branch/sync/xlsx2csv
+        # ```
+        stderr_branch = stderr_branch.replace(str(branch), str(base))
 
         if resolution != resolution_branch or stderr != stderr_branch:
             differences.append(

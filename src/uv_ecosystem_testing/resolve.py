@@ -126,9 +126,8 @@ def prepare_uv_command(
         command = [uv, "lock", *shared_args]
     elif mode == Mode.SYNC:
         package_dir.joinpath("pyproject.toml").write_text(specification)
-        command = [uv, "sync", *shared_args]
-        if not i_am_in_docker:
-            command.append("--no-install-project")
+        # TODO(konsti): Add a git clone mode that can install the project
+        command = [uv, "sync", "--no-install-project", *shared_args]
     elif mode == Mode.LOCK:
         package_dir.joinpath("pyproject.toml").write_text(
             f"""
@@ -221,7 +220,15 @@ def resolve_all(
             project_toml = file.read_text()
             data = tomllib.loads(project_toml)
             project = data.get("project")
-            if not project:
+            if project:
+                # Remove file references that we didn't download
+                if "readme" in project:
+                    del project["readme"]
+                if "license-files" in project:
+                    del project["license-files"]
+                if "license" in project:
+                    del project["license"]
+            else:
                 no_project += 1
                 continue
             if dynamic := project.get("dynamic"):
