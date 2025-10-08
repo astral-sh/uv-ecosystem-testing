@@ -126,7 +126,7 @@ def prepare_uv_command(
         command = [uv, "lock", *shared_args]
     elif mode == Mode.SYNC:
         package_dir.joinpath("pyproject.toml").write_text(specification)
-        command = [uv, "sync", *shared_args, "--preview"]
+        command = [uv, "sync", *shared_args]
         if not i_am_in_docker:
             command.append("--no-install-project")
     elif mode == Mode.LOCK:
