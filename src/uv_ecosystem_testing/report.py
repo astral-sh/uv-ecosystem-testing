@@ -32,7 +32,8 @@ def create_report(
         )
 
     total = 0
-    successful = 0
+    successful_base = 0
+    regressions = 0
     differences = []
     fixed = []
     files = sorted(dir for dir in base.iterdir() if dir.is_dir())
@@ -48,7 +49,7 @@ def create_report(
         summary_base = package_base.joinpath("summary.json").read_text()
         summary_branch = package_branch.joinpath("summary.json").read_text()
         if json.loads(summary_base)["exit_code"] == 0:
-            successful += 1
+            successful_base += 1
         else:
             if json.loads(summary_branch)["exit_code"] == 0:
                 fixed.append(package)
@@ -68,7 +69,11 @@ def create_report(
         if parameters.mode == Mode.COMPILE:
             resolution_branch = package_branch.joinpath("stdout.txt").read_text()
         else:
-            resolution_branch = package_branch.joinpath("uv.lock").read_text()
+            try:
+                resolution_branch = package_branch.joinpath("uv.lock").read_text()
+            except FileNotFoundError:
+                resolution_branch = "Package failed to resolve"
+                regressions += 1
             if package_branch.joinpath("stdout.txt").read_text().strip():
                 raise RuntimeError(f"Stdout not empty (branch): {package}")
         stderr_branch = package_branch.joinpath("stderr.txt").read_text()
@@ -105,14 +110,20 @@ def create_report(
             + "\n"
         )
         writer.write(
-            f" * Successfully resolved packages: {successful}/{total} ({successful / total:.0%}). "
+            f" * Successfully resolved packages: {successful_base}/{total} ({successful_base / total:.0%}). "
             + "Only success resolutions can be compared.\n"
         )
+        if regressions > 0:
+            writer.write(f" * **There were {regressions} regressions**\n")
         writer.write("\n")
         if len(differences) == 0:
-            writer.write(f"All resolutions are identical ({successful} total).\n\n")
+            writer.write(
+                f"All resolutions are identical ({successful_base} total).\n\n"
+            )
         else:
-            writer.write(f"Different resolutions: {len(differences)}/{successful}\n")
+            writer.write(
+                f"Different resolutions: {len(differences)}/{successful_base}\n"
+            )
 
         if fixed:
             writer.write("**Packages fixed in branch**\n")
@@ -194,12 +205,16 @@ def create_report(
             writer.write("\n")
 
         writer.write(
-            f"Successfully resolved packages: {successful}/{total} ({successful / total:.0%})\n"
+            f"Successfully resolved packages: {successful_base}/{total} ({successful_base / total:.0%})\n"
         )
+        if regressions > 0:
+            writer.write(f"Regressions: {regressions}\n")
         if len(differences) == 0:
-            writer.write(f"All resolutions are identical ({successful} total).\n")
+            writer.write(f"All resolutions are identical ({successful_base} total).\n")
         else:
-            writer.write(f"Different resolutions: {len(differences)}/{successful}\n")
+            writer.write(
+                f"Different resolutions: {len(differences)}/{successful_base}\n"
+            )
 
 
 if __name__ == "__main__":
