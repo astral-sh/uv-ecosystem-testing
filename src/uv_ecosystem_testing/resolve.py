@@ -113,6 +113,9 @@ def prepare_uv_command(
     python: str,
     i_am_in_docker: bool = False,
 ) -> list[Path | str]:
+    # Support relative paths such as `./uv-main`
+    uv = uv.resolve()
+
     shared_args = ["--cache-dir", cache, "--color", "never", "--no-python-downloads"]
     if not i_am_in_docker:
         shared_args.append("--no-build")
