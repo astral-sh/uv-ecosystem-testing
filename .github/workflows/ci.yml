@@ -24,6 +24,9 @@ jobs:
       - name: Run ruff
         run: uv run ruff check
 
+      - name: Run ty
+        run: uv run ty check
+
       - name: Check prettier formatting
         run:
           npx prettier --prose-wrap always --check "./*.md" ".github/**/*.yml"

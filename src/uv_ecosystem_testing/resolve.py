@@ -164,6 +164,10 @@ def communicate(process: subprocess.Popen, stdin: str | None) -> tuple[str, str]
     Start threads to drain the pipes to avoid blocking on full pipes, but don't use
     libc's `wait` so we can use `os.wait4` later.
     """
+    assert process.stdin is not None
+    assert process.stdout is not None
+    assert process.stderr is not None
+
     # If the process already exited, we get a `BrokenPipeError`.
     try:
         if stdin:
@@ -173,16 +177,19 @@ def communicate(process: subprocess.Popen, stdin: str | None) -> tuple[str, str]
         pass
 
     # Mutable objects to communicate across threads
-    stdout = []
-    stderr = []
+    stdout: list[str] = []
+    stderr: list[str] = []
+
+    stdout_pipe = process.stdout
+    stderr_pipe = process.stderr
 
     def read_stdout():
-        stdout.append(process.stdout.read())
-        process.stdout.close()
+        stdout.append(stdout_pipe.read())
+        stdout_pipe.close()
 
     def read_stderr():
-        stderr.append(process.stderr.read())
-        process.stderr.close()
+        stderr.append(stderr_pipe.read())
+        stderr_pipe.close()
 
     stdout_thread = Thread(target=read_stdout, daemon=True)
     stderr_thread = Thread(target=read_stderr, daemon=True)
