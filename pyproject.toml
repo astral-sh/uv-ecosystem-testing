@@ -24,3 +24,12 @@ dev = [
 
 [tool.ruff.format]
 skip-magic-trailing-comma = true
+
+[tool.uv]
+no-build = true
+# The container installs this project as a non-editable package.
+no-binary-package = ["uv-ecosystem-testing"]
+# Pin the isolated build environment for source-build exceptions.
+build-constraint-dependencies = [
+    "uv-build==0.10.12",
+]

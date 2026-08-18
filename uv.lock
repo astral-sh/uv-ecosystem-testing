@@ -2,6 +2,9 @@ version = 1
 revision = 3
 requires-python = ">=3.14"
 
+[manifest]
+build-constraints = [{ name = "uv-build", specifier = "==0.10.12" }]
+
 [[package]]
 name = "anyio"
 version = "4.12.1"
