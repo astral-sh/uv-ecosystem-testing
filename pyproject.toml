@@ -25,6 +25,7 @@ dev = [
 skip-magic-trailing-comma = true
 
 [tool.uv]
+exclude-newer = "P7D"
 no-build = true
 # The container installs this project as a non-editable package.
 no-binary-package = ["uv-ecosystem-testing"]
