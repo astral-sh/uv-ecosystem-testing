@@ -34,4 +34,5 @@ jobs:
 
       - name: Check prettier formatting
         run:
-          npx prettier --prose-wrap always --check "./*.md" ".github/**/*.yml"
+          npx prettier@3.9.6 --prose-wrap always --check "./*.md"
+          ".github/**/*.yml"
