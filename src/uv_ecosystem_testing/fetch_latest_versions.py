@@ -5,10 +5,10 @@ Fetch the latest version for each package in the input file.
 import argparse
 import asyncio
 import csv
+import json
 from pathlib import Path
 
-import orjson
-from httpx import AsyncClient, HTTPError
+from httpx2 import AsyncClient, HTTPError
 from tqdm.asyncio import tqdm
 
 from uv_ecosystem_testing import top_15k_pypi, top_15k_pypi_latest_version
@@ -20,7 +20,7 @@ async def get_latest_version(
     try:
         response = await client.get(f"https://pypi.org/pypi/{package_name}/json")
         response.raise_for_status()
-        data = orjson.loads(response.content)
+        data = json.loads(response.content)
         return package_name, data["info"]["version"]
     except HTTPError as e:
         print(f"Error fetching latest version for {package_name}: {e}")
