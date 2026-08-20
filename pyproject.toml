@@ -6,8 +6,7 @@ readme = "Readme.md"
 requires-python = ">=3.14"
 license = "MIT OR Apache-2.0"
 dependencies = [
-    "httpx>=0.28.1,<0.29.0",
-    "orjson>=3.11.3,<4.0.0",
+    "httpx2>=2.0.0,<3.0.0",
     "tomli-w>=1.2.0,<2.0.0",
     "tqdm>=4.67.1,<5.0.0",
 ]
@@ -24,3 +23,13 @@ dev = [
 
 [tool.ruff.format]
 skip-magic-trailing-comma = true
+
+[tool.uv]
+exclude-newer = "P7D"
+no-build = true
+# The container installs this project as a non-editable package.
+no-binary-package = ["uv-ecosystem-testing"]
+# Pin the isolated build environment for source-build exceptions.
+build-constraint-dependencies = [
+    "uv-build==0.10.12",
+]
